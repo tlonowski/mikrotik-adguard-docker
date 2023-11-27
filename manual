@@ -1,0 +1,20 @@
+/system/device-mode/update container=yes
+
+/interface veth add address=172.17.0.1/24 gateway=172.17.0.254 name=agh
+/interface bridge add name=dockers
+/interface bridge port add bridge=dockers interface=agh
+/ip address add address=172.17.0.254/24 interface=dockers network=172.17.0.0
+
+# default mikrotik masquarade rule not necessary
+   /ip firewall nat add action=masquerade chain=srcnat
+
+# First mount and prepare pendrive: /usb1
+/container config set registry-url=https://registry-1.docker.io tmpdir=/usb1/pull
+
+# Create mount for config
+/container mounts add dst=/opt/adguardhome/conf name=agh_conf src=/usb1/conf/agh
+
+# Create container
+/container add remote-image=adguard/adguardhome:latest interface=agh logging=yes mounts=agh_conf start-on-boot=yes workdir=/opt/adguardhome/work root-dir="/disk1/agh" cmd="-c /opt/adguardhome/conf/AdGuardHome.yaml -h 0.0.0.0 -w /opt/adguardhome/work" dns=1.1.1.1 entrypoint=/opt/adguardhome/AdGuardHome
+
+/container start number=0
